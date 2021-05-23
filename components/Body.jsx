@@ -1,8 +1,8 @@
 import React from "react";
-import {Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import chicken from '../assets/chicken.png';
 import settings from '../assets/settings.png';
-import {IPSTORE, ORANGE, PORT} from "./constantes";
+import {GRAY, IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "./constantes";
 import Constants from 'expo-constants';
 import {Settings} from "./Settings";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,46 +13,107 @@ export class Body extends React.Component{
         super(props);
         this.state={
             modal:false,
-            request:false
+            request:false,
+            status:""
         }
     }
+
+    componentDidMount() {
+       this.fetchStatus();
+    }
+    fetchStatus = ()=>{
+        AsyncStorage.getItem(IPSTORE).then((ip) =>{
+            if (ip===null) return;
+            const query = 'http://'+ip+":"+PORT+'/status';
+            fetch(query)
+                .then(response => response.text())
+                .then(resp => {
+                    this.setState({status:resp})
+                })
+                .catch(error => {
+                    this.setState({status:""})
+                    console.error(error);
+                });
+        });
+    }
+
     changeModal = ()=>{
         this.setState({modal:!this.state.modal});
+        this.fetchStatus();
     }
 
-    openCoco = ()=>{
-        AsyncStorage.getItem(IPSTORE).then((ip) =>{
-            const query = 'http://'+ip+":"+PORT+'/open';
-            console.log(query)
-            fetch(query)
-                .then(response => response.text())
-                .then(responseJson => {
-                    console.log(responseJson);
-                })
-                .catch(error => {
-                    console.error(error);
-                });
-        });
-    }
-
-    closeCoco = () => {
-        if(this.state.request) return;
+    command= (type)=>{
         this.setState({request:true});
+
         AsyncStorage.getItem(IPSTORE).then((ip) =>{
-            const query = 'http://'+ip+":"+PORT+'/close';
-            console.log(query)
+            const query = 'http://'+ip+":"+PORT+'/'+type;
+            let escape = false;
             fetch(query)
                 .then(response => response.text())
-                .then(responseJson => {
-                    console.log(responseJson);
+                .then(resp => {
+                    if (resp=='denied')escape=true;
                 })
                 .catch(error => {
-                    console.error(error);
-                });
+                    escape=true;
+                    //console.error(error);
+                })
+                .finally(()=>{
+                    if(escape){
+                        this.setState({request: false});
+                        return;
+                    }
+                    this.refresh(ip);
+            });
         });
+    }
+    refresh = (ip) =>{
+        const query = 'http://'+ip+":"+PORT;
+        fetch(query+'/pending')
+            .then(response => response.text())
+            .then(resp=> {
+                if(resp==='denied'){
+                    setTimeout(()=>{this.refresh(ip)},1000);
+                }
+                else{
+                    this.setState({request:false})
+                    fetch(query+'/status')
+                        .then(response => response.text())
+                        .then(resp => {
+                            this.setState({status:resp})
+                        })
+                        .catch(error => {
+                            console.error(error);
+                        });
+                }
+            })
+            .catch(error => {
+                console.error(error);
+            });
+
+    }
+    getColor = ()=>{
+        switch(this.state.status){
+            case(""):
+                return "gray";
+            case("open"):
+                return "green";
+            case("closed"):
+                return "red";
+        }
+    }
+    getStatus = ()=>{
+        switch(this.state.status){
+            case(""):
+                return "Inconnu";
+            case("open"):
+                return "Ouvert";
+            case("closed"):
+                return "Fermé";
+        }
     }
 
     render() {
+        const disabled=this.state.request;
         return(
             <View style={styles.container}>
                 <Modal
@@ -72,14 +133,19 @@ export class Body extends React.Component{
                     <Text style={styles.titre}>Cocorico</Text>
 
                 </View>
+                <View style={[styles.status,styles.flexCenter]}>
+                    {this.state.request?<ActivityIndicator size={50} color={ORANGE} />:null}
+                    <Text style={styles.statusTitle}>Status</Text>
+                    <Text style={[styles.statusText,{color:this.getColor()}]}>{this.getStatus()}</Text>
+                </View>
                 <View style={[styles.open,styles.flexCenter]}>
-                   <TouchableOpacity onPress={this.openCoco}>
-                       <Text style={styles.button}>Ouvrir</Text>
+                   <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'open')}>
+                       <Text style={[styles.button,{backgroundColor: disabled?LIGHT_GRAY:ORANGE}]}>Ouvrir</Text>
                    </TouchableOpacity>
                 </View>
                 <View style={[styles.close,styles.flexCenter]}>
-                    <TouchableOpacity onPress={this.closeCoco}>
-                        <Text style={styles.button}>Fermer</Text>
+                    <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'close')}>
+                        <Text style={[styles.button,{backgroundColor: disabled?LIGHT_GRAY:ORANGE}]}>Fermer</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -102,14 +168,15 @@ const styles = StyleSheet.create({
         flex:1,
     },
     open:{
-        flex:2,
+        flex:1.5,
     },
     close:{
-        flex:2,
+        flex:1.5,
     },
     titre:{
-        fontSize:30,
-        color:ORANGE
+        fontSize:35,
+        color:ORANGE,
+
     },
     chicken:{
         maxHeight:100,
@@ -136,6 +203,17 @@ const styles = StyleSheet.create({
     touchable:{
         maxHeight:50,
         maxWidth:50
+    },
+    status:{
+        flex:1
+    },
+    statusTitle:{
+        color:"white",
+        fontWeight:"bold",
+        fontSize:27
+    },
+    statusText:{
+        fontSize:25
     }
 
 });
