@@ -135,7 +135,7 @@ export class Body extends React.Component{
                 </View>
                 <View style={[styles.status,styles.flexCenter]}>
                     {this.state.request?<ActivityIndicator size={50} color={ORANGE} />:null}
-                    <Text style={styles.statusTitle}>Status</Text>
+                    <Text style={styles.statusTitle}>Statut</Text>
                     <Text style={[styles.statusText,{color:this.getColor()}]}>{this.getStatus()}</Text>
                 </View>
                 <View style={[styles.open,styles.flexCenter]}>
