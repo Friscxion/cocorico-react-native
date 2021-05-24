@@ -2,11 +2,13 @@ import React from "react";
 import {ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import chicken from '../assets/chicken.png';
 import settings from '../assets/settings.png';
-import {GRAY, IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "./constantes";
+import {IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "./constantes";
 import Constants from 'expo-constants';
 import {Settings} from "./Settings";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-const ref = React.createRef();
+import Frisbee from "frisbee";
+
+
 
 export class Body extends React.Component{
     constructor(props) {
@@ -14,81 +16,70 @@ export class Body extends React.Component{
         this.state={
             modal:false,
             request:false,
-            status:""
+            status:"",
+            frisbee:null
         }
     }
 
     componentDidMount() {
        this.fetchStatus();
     }
+
     fetchStatus = ()=>{
         AsyncStorage.getItem(IPSTORE).then((ip) =>{
             if (ip===null) return;
-            const query = 'http://'+ip+":"+PORT+'/status';
-            fetch(query)
-                .then(response => response.text())
-                .then(resp => {
-                    this.setState({status:resp})
-                })
-                .catch(error => {
-                    this.setState({status:""})
-                    console.error(error);
-                });
+            const frisbee=new Frisbee({
+                baseURI: 'http://'+ip+":"+PORT// optional
+            });
+            this.setState({frisbee:frisbee});
+            // this is a simple example using `.then` and `.catch`
+            this.state.frisbee.get('/status')
+                .then((res)=>this.setState({status:res.body}))
+                .catch(console.error);
         });
     }
 
     changeModal = ()=>{
         this.setState({modal:!this.state.modal});
-        this.fetchStatus();
+        if(this.state.modal){
+            this.fetchStatus();
+        }
+
     }
 
     command= (type)=>{
         this.setState({request:true});
-
-        AsyncStorage.getItem(IPSTORE).then((ip) =>{
-            const query = 'http://'+ip+":"+PORT+'/'+type;
-            let escape = false;
-            fetch(query)
-                .then(response => response.text())
-                .then(resp => {
-                    if (resp=='denied')escape=true;
-                })
-                .catch(error => {
-                    escape=true;
-                    //console.error(error);
-                })
-                .finally(()=>{
-                    if(escape){
-                        this.setState({request: false});
-                        return;
-                    }
-                    this.refresh(ip);
+        let escape = false;
+        this.state.frisbee.get('/'+type)
+            .then((res)=> {
+                if (res.body=='denied')escape=true;
+            })
+            .catch((error)=>{
+                escape=true
+            }) .finally(()=>{
+                if(escape){
+                    this.setState({request: false});
+                    return;
+                }
+                this.refresh();
             });
-        });
     }
-    refresh = (ip) =>{
-        const query = 'http://'+ip+":"+PORT;
-        fetch(query+'/pending')
-            .then(response => response.text())
-            .then(resp=> {
-                if(resp==='denied'){
-                    setTimeout(()=>{this.refresh(ip)},1000);
+    refresh = () =>{
+        this.state.frisbee.get('/pending')
+            .then((res)=> {
+                if(res.body==='denied'){
+                    setTimeout(()=>{this.refresh()},5000);
                 }
                 else{
                     this.setState({request:false})
-                    fetch(query+'/status')
-                        .then(response => response.text())
-                        .then(resp => {
-                            this.setState({status:resp})
-                        })
-                        .catch(error => {
-                            console.error(error);
-                        });
+                    this.state.frisbee.get('/status')
+                        .then((res)=>this.setState({status:res.body}))
+                        .catch(console.error);
                 }
             })
-            .catch(error => {
-                console.error(error);
-            });
+            .catch((error)=>{
+                console.log(error)
+            })
 
     }
     getColor = ()=>{
