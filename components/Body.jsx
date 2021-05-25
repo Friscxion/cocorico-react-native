@@ -52,7 +52,7 @@ export class Body extends React.Component{
         let escape = false;
         this.state.frisbee.get('/'+type)
             .then((res)=> {
-                if (res.body=='denied')escape=true;
+                if (res.body==='denied')escape=true;
             })
             .catch((error)=>{
                 escape=true
@@ -65,22 +65,22 @@ export class Body extends React.Component{
             });
     }
     refresh = () =>{
-        this.state.frisbee.get('/pending')
-            .then((res)=> {
-                if(res.body==='denied'){
-                    setTimeout(()=>{this.refresh()},5000);
-                }
+        let networkPromise = this.state.frisbee.get('/pending');
+        let timeOutPromise = new Promise(function(resolve, reject) {
+            setTimeout(resolve, 3000, 'Timeout Done');
+        });
+        let component = this;
+        Promise.all([networkPromise, timeOutPromise])
+            .then(function(value) {
+                if(value[0].body==='denied')
+                    component.refresh()
                 else{
-                    this.setState({request:false})
-                    this.state.frisbee.get('/status')
-                        .then((res)=>this.setState({status:res.body}))
+                    component.setState({request:false})
+                    component.state.frisbee.get('/status')
+                        .then((value)=>component.setState({status:value.body}))
                         .catch(console.error);
                 }
-            })
-            .catch((error)=>{
-                console.log(error)
-            })
-
+        });
     }
     getColor = ()=>{
         switch(this.state.status){
