@@ -94,7 +94,7 @@ export class Settings extends React.Component{
                 </View>
                 <View style={styles.viewhorraire}>
                     <Text style={styles.ip}>
-                        Couché :
+                        Coucher :
                     </Text>
                    <View style={styles.sunview}>
                        <TextInput editable={false} style={styles.inputsec} value={this.state.sunset}/>
@@ -103,7 +103,7 @@ export class Settings extends React.Component{
                        <Text>min</Text>
                    </View>
                     <Text style={styles.ip}>
-                        Levé :
+                        Lever :
                     </Text>
                     <View style={styles.sunview}>
                         <TextInput editable={false}  style={styles.inputsec} value={this.state.sunrise}/>
