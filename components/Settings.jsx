@@ -1,6 +1,6 @@
 import {Image, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
 import React from "react";
-import {GRAY, IPSTORE, ORANGE, PORT} from "./constantes";
+import {GRAY, IPSTORE, ORANGE, PORT} from "../modules/constantes";
 import close from '../assets/close.png'
 
 import Frisbee from "frisbee";
@@ -12,42 +12,27 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export class Settings extends React.Component{
     constructor(props) {
         super(props);
+        this.frisbee=require('../modules/frisbee');
         this.state={
             visible:false,
             value:"",
             sunrise:"",
             sunset:"",
             sunriseBonus:"",
-            sunsetBonus:"",
-            frisbee:null
+            sunsetBonus:""
         }
     }
     componentDidMount() {
-        AsyncStorage.getItem(IPSTORE).then((ip)=>{
-            this.setState({value:ip});
-            const frisbee=new Frisbee({
-                baseURI: 'http://'+ip+":"+PORT// optional
-            });
-            this.setState({frisbee:frisbee});
-            this.state.frisbee.get('/sunrise_sunset')
-                .then((res)=> {
-                    let sunrise = res.body.sunrise;
-                    let sunset= res.body.sunset;
-                    sunrise = sunrise.split('T')[1].split('.')[0];
-                    sunset = sunset.split('T')[1].split('.')[0];
-                    this.setState({sunrise: sunrise, sunset: sunset})
-                })
-                .catch(console.error);;
-            this.state.frisbee.get('/params')
-                .then((res)=> {
-                    let lever = res.body.lever+"";
-                    let coucher= res.body.coucher+"";
-                    this.setState({sunriseBonus: lever, sunsetBonus: coucher})
-                })
-                .catch(console.error);;
-        })
-
-
+        this.frisbee.get('/sunset_sunrise')
+            .then((res)=> {
+                console.log(res.body)
+                let sunrise = res.body.sunrise;
+                let sunset= res.body.sunset;
+                sunrise = sunrise.split('T')[1].split('.')[0];
+                sunset = sunset.split('T')[1].split('.')[0];
+                this.setState({sunrise: sunrise, sunset: sunset,sunsetBonus:res.body.sunsetAdd,sunriseBonus:res.body.sunriseAdd})
+            })
+            .catch(console.error);
     }
 
     escape= () => {

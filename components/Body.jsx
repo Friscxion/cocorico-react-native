@@ -2,62 +2,50 @@ import React from "react";
 import {ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import chicken from '../assets/chicken.png';
 import settings from '../assets/settings.png';
-import {IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "./constantes";
+import {IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "../modules/constantes";
 import Constants from 'expo-constants';
 import {Settings} from "./Settings";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import Frisbee from "frisbee";
 
 
 
 export class Body extends React.Component{
     constructor(props) {
         super(props);
+        this.frisbee=require('../modules/frisbee');
         this.state={
             modal:false,
             request:false,
-            status:"",
-            frisbee:null
+            status:""
         }
     }
 
     componentDidMount() {
-       this.fetchStatus();
+        this.fetchStatus();
     }
 
     fetchStatus = ()=>{
-        AsyncStorage.getItem(IPSTORE).then((ip) =>{
-            if (ip===null) return;
-            const frisbee=new Frisbee({
-                baseURI: 'http://'+ip+":"+PORT// optional
-            });
-            this.setState({frisbee:frisbee});
-            // this is a simple example using `.then` and `.catch`
-            this.state.frisbee.get('/status')
-                .then((res)=>this.setState({status:res.body}))
-                .catch(console.error);
-        });
+        this.frisbee.get('/status')
+            .then((res)=>this.setState({status:res.body}))
+            .catch(console.error);
     }
 
     changeModal = ()=>{
-        this.setState({modal:!this.state.modal});
-        if(this.state.modal){
-            this.fetchStatus();
-        }
+        this.setState({modal:!this.state.modal},this.fetchStatus);
 
     }
 
     command= (type)=>{
         this.setState({request:true});
         let escape = false;
-        this.state.frisbee.get('/'+type)
+        this.frisbee.get('/'+type)
             .then((res)=> {
                 if (res.body==='denied')escape=true;
             })
             .catch((error)=>{
                 escape=true
-            }) .finally(()=>{
+            })
+            .finally(()=>{
                 if(escape){
                     this.setState({request: false});
                     return;
@@ -66,7 +54,7 @@ export class Body extends React.Component{
             });
     }
     refresh = () =>{
-        let networkPromise = this.state.frisbee.get('/pending');
+        let networkPromise = this.frisbee.get('/pending');
         let timeOutPromise = new Promise(function(resolve, reject) {
             setTimeout(resolve, 3000, 'Timeout Done');
         });
@@ -77,12 +65,13 @@ export class Body extends React.Component{
                     component.refresh()
                 else{
                     component.setState({request:false})
-                    component.state.frisbee.get('/status')
+                    component.frisbee.get('/status')
                         .then((value)=>component.setState({status:value.body}))
                         .catch(console.error);
                 }
         });
     }
+
     getColor = ()=>{
         switch(this.state.status){
             case(""):
@@ -93,6 +82,7 @@ export class Body extends React.Component{
                 return "red";
         }
     }
+
     getStatus = ()=>{
         switch(this.state.status){
             case(""):

@@ -2,7 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {Body} from "./components/Body";
-import {GRAY} from "./components/constantes";
+import {GRAY} from "./modules/constantes";
 
 export default function App() {
   return (
