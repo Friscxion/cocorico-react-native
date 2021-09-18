@@ -1,25 +1,15 @@
 import {Image, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
 import React from "react";
-import {GRAY, IPSTORE, ORANGE, PORT} from "../modules/constantes";
+import {GRAY, ORANGE} from "../modules/constantes";
 import close from '../assets/close.png'
-
-import Frisbee from "frisbee";
-
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-
 
 export class Settings extends React.Component{
     constructor(props) {
         super(props);
         this.frisbee=require('../modules/frisbee');
+
         this.state={
-            visible:false,
-            value:"",
-            sunrise:"",
-            sunset:"",
-            sunriseBonus:"",
-            sunsetBonus:""
+            value:""
         }
     }
     componentDidMount() {
@@ -30,19 +20,19 @@ export class Settings extends React.Component{
                 let sunset= res.body.sunset;
                 sunrise = sunrise.split('T')[1].split('.')[0];
                 sunset = sunset.split('T')[1].split('.')[0];
-                this.setState({sunrise: sunrise, sunset: sunset,sunsetBonus:res.body.sunsetAdd,sunriseBonus:res.body.sunriseAdd})
+                this.setState({
+                    sunrise: sunrise,
+                    sunset: sunset,
+                    sunsetBonus:res.body.sunsetAdd+"",
+                    sunsetAddon:res.body.sunsetAdd+"",
+                    sunriseBonus:res.body.sunriseAdd+"",
+                    sunriseAddon:res.body.sunriseAdd+""
+                })
             })
             .catch(console.error);
     }
 
-    escape= () => {
-        this.props.body.changeModal();
-    }
 
-    onChangeInput = (text) => {
-        AsyncStorage.setItem(IPSTORE,text);
-        this.setState({value:text});
-    }
 
     onChangeInputSunset = (text) =>{
         this.setState({sunsetBonus:text});
@@ -51,50 +41,52 @@ export class Settings extends React.Component{
     onChangeInputSunrise = (text) =>{
         this.setState({sunriseBonus:text});
     }
+
     componentWillUnmount() {
-        const toPost = {lever:this.state.sunriseBonus,coucher:this.state.sunsetBonus}
-        this.state.frisbee.post('/params',
-            {
-                body:toPost,
+       if(this.state.sunriseBonus!==this.state.sunriseAddon)
+           this.frisbee.post("/sunrise", {
+               headers: {
+                   'Content-Type': "application/json"
+               },
+               body: {
+                   data: parseInt(this.state.sunriseBonus)
+               }
+           })
+        if(this.state.sunsetBonus!==this.state.sunsetAddon)
+            this.frisbee.post("/sunset", {
                 headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': "application/json"
+                },
+                body: {
+                    data: parseInt(this.state.sunsetBonus)
                 }
             })
-            .then(resp=>console.log(resp.body))
-            .catch(e=>console.log(e));
     }
 
     render() {
         return (
             <View style={styles.modal}>
-                <TouchableOpacity onPress={this.escape} style={styles.viewclose}>
+                <TouchableOpacity onPress={this.props.body.changeModal} style={styles.viewclose}>
                     <Image style={styles.close} source={close}/>
                 </TouchableOpacity>
-                <View style={styles.viewip}>
-                    <Text style={styles.ip}>
-                        IP Raspberry :
-                    </Text>
-                    <TextInput style={styles.input} value={this.state.value} onChangeText={this.onChangeInput}/>
-                </View>
                 <View style={styles.viewhorraire}>
                     <Text style={styles.ip}>
                         Coucher :
                     </Text>
                    <View style={styles.sunview}>
                        <TextInput editable={false} style={styles.inputsec} value={this.state.sunset}/>
-                       <Text>+</Text>
-                       <TextInput keyboardType = 'numeric' style={styles.inputtri} value={this.state.sunsetBonus} onChangeText={this.onChangeInputSunset}/>
-                       <Text>min</Text>
+                       <Text style={styles.white}>+</Text>
+                       <TextInput editable={this.state.sunsetAddon?true:false}  keyboardType={'numeric'} style={styles.inputtri} value={this.state.sunsetBonus} onChangeText={this.onChangeInputSunset}/>
+                       <Text style={styles.white}>min</Text>
                    </View>
                     <Text style={styles.ip}>
                         Lever :
                     </Text>
                     <View style={styles.sunview}>
                         <TextInput editable={false}  style={styles.inputsec} value={this.state.sunrise}/>
-                        <Text>+</Text>
-                        <TextInput keyboardType = 'numeric' style={styles.inputtri} value={this.state.sunriseBonus} onChangeText={this.onChangeInputSunrise}/>
-                        <Text>min</Text>
+                        <Text style={styles.white}>+</Text>
+                        <TextInput editable={this.state.sunriseAddon?true:false} keyboardType = 'numeric' style={styles.inputtri} value={this.state.sunriseBonus} onChangeText={this.onChangeInputSunrise}/>
+                        <Text style={styles.white}>min</Text>
                     </View>
                 </View>
             </View>
@@ -124,7 +116,8 @@ const styles = StyleSheet.create({
         flex:2
     },
     ip:{
-        fontSize:30
+        fontSize:30,
+        color:"white"
     },
     input:{
         backgroundColor: ORANGE,
@@ -164,5 +157,8 @@ const styles = StyleSheet.create({
         borderRadius:20,
         borderWidth:1,
         marginHorizontal:5
+    },
+    white:{
+        color:"white"
     }
 });

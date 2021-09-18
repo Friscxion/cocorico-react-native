@@ -2,56 +2,47 @@ import React from "react";
 import {ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import chicken from '../assets/chicken.png';
 import settings from '../assets/settings.png';
-import {IPSTORE, LIGHT_GRAY, ORANGE, PORT} from "../modules/constantes";
+import {LIGHT_GRAY, ORANGE} from "../modules/constantes";
 import Constants from 'expo-constants';
 import {Settings} from "./Settings";
-
-
-
+import LoadingDots from "react-native-loading-dots";
 
 export class Body extends React.Component{
     constructor(props) {
         super(props);
-        this.frisbee=require('../modules/frisbee');
         this.state={
             modal:false,
-            request:false,
-            status:""
+            status:"unknow"
         }
+        this.socketSetup();
     }
 
-    componentDidMount() {
-        this.fetchStatus();
+    socketSetup(){
+        this.socket=require("../modules/cocorico-socket");
+
+        this.socket.on("status",(arg)=>{
+            this.setState({status:arg})
+        })
+        this.socket.on("data",(arg)=>{
+            console.log("Data : " +arg)
+        })
+
+        this.socket.on("connected",(arg)=>{
+            this.socket.emit("data",  (response) => {
+                console.log(new Date(response.sunset).getHours(),new Date(response.sunset).getMinutes());
+            });
+        })
+
+        this.socket.on("connect_error", (err) => {
+            console.log(`connect_error due to ${err.message}`);
+        });
+
     }
 
-    fetchStatus = ()=>{
-        this.frisbee.get('/status')
-            .then((res)=>this.setState({status:res.body}))
-            .catch(console.error);
-    }
-
-    changeModal = ()=>{
-        this.setState({modal:!this.state.modal},this.fetchStatus);
-
-    }
+    changeModal = () => this.setState({modal:!this.state.modal});
 
     command= (type)=>{
-        this.setState({request:true});
-        let escape = false;
-        this.frisbee.get('/'+type)
-            .then((res)=> {
-                if (res.body==='denied')escape=true;
-            })
-            .catch((error)=>{
-                escape=true
-            })
-            .finally(()=>{
-                if(escape){
-                    this.setState({request: false});
-                    return;
-                }
-                this.refresh();
-            });
+        this.socket.emit(type)
     }
     refresh = () =>{
         let networkPromise = this.frisbee.get('/pending');
@@ -74,23 +65,32 @@ export class Body extends React.Component{
 
     getColor = ()=>{
         switch(this.state.status){
-            case(""):
-                return "gray";
             case("open"):
                 return "green";
             case("closed"):
                 return "red";
+            case("pending"):
+                return ORANGE;
+            default:
+                return "gray";
         }
     }
 
     getStatus = ()=>{
         switch(this.state.status){
-            case(""):
-                return "Inconnu";
             case("open"):
                 return "Ouvert";
             case("closed"):
                 return "Fermé";
+            case("pending"):
+                return ["Action en cours ",
+                    <LoadingDots
+                        key={1}
+                        colors={["#ffffff", ORANGE, "#ffffff", ORANGE]}
+                        size={15}
+                        bounceHeight={15}/>];
+            default:
+                return "Inconnu";
         }
     }
 
@@ -121,12 +121,12 @@ export class Body extends React.Component{
                     <Text style={[styles.statusText,{color:this.getColor()}]}>{this.getStatus()}</Text>
                 </View>
                 <View style={[styles.open,styles.flexCenter]}>
-                   <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'open')}>
+                   <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'ouvrir')}>
                        <Text style={[styles.button,{backgroundColor: disabled?LIGHT_GRAY:ORANGE}]}>Ouvrir</Text>
                    </TouchableOpacity>
                 </View>
                 <View style={[styles.close,styles.flexCenter]}>
-                    <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'close')}>
+                    <TouchableOpacity disabled={disabled} onPress={this.command.bind(this,'fermer')}>
                         <Text style={[styles.button,{backgroundColor: disabled?LIGHT_GRAY:ORANGE}]}>Fermer</Text>
                     </TouchableOpacity>
                 </View>
