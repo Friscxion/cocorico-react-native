@@ -31,7 +31,26 @@ export class Settings extends React.Component{
             })
             .catch(console.error);
     }
+    socketSetup(){
+        this.socket=require("../modules/cocorico-socket");
+        this.socket.on("status",(arg)=>{
+            console.log("Status : "+arg)
+        })
+        this.socket.on("data",(arg)=>{
+            console.log("Data : " +arg)
+        })
 
+        this.socket.on("connected",(arg)=>{
+            this.socket.emit("data",  (response) => {
+                console.log(new Date(response.sunset).getHours(),new Date(response.sunset).getMinutes());
+            });
+            this.socket.emit("ouvrir")
+        })
+
+        this.socket.on("connect_error", (err) => {
+            console.log(`connect_error due to ${err.message}`);
+        });
+    }
 
 
     onChangeInputSunset = (text) =>{

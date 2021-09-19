@@ -1,5 +1,5 @@
 import React from "react";
-import {ActivityIndicator, Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
+import {Image, Modal, StyleSheet, Text, TouchableOpacity, View} from "react-native";
 import chicken from '../assets/chicken.png';
 import settings from '../assets/settings.png';
 import {LIGHT_GRAY, ORANGE} from "../modules/constantes";
@@ -7,13 +7,17 @@ import Constants from 'expo-constants';
 import {Settings} from "./Settings";
 import LoadingDots from "react-native-loading-dots";
 
+
 export class Body extends React.Component{
     constructor(props) {
         super(props);
         this.state={
             modal:false,
-            status:"unknow"
+            status:"unknow",
+            online:false
         }
+    }
+    componentDidMount() {
         this.socketSetup();
     }
 
@@ -23,45 +27,20 @@ export class Body extends React.Component{
         this.socket.on("status",(arg)=>{
             this.setState({status:arg})
         })
-        this.socket.on("data",(arg)=>{
-            console.log("Data : " +arg)
-        })
 
-        this.socket.on("connected",(arg)=>{
-            this.socket.emit("data",  (response) => {
-                console.log(new Date(response.sunset).getHours(),new Date(response.sunset).getMinutes());
-            });
-        })
-
-        this.socket.on("connect_error", (err) => {
-            console.log(`connect_error due to ${err.message}`);
+        this.socket.on("connected",(args)=>{
+            this.setState({online:true})
         });
 
+        this.socket.on("connect_error", (err) => {
+            this.setState({online:false})
+            console.log(`connect_error due to ${err.message}`);
+        });
     }
 
     changeModal = () => this.setState({modal:!this.state.modal});
 
-    command= (type)=>{
-        this.socket.emit(type)
-    }
-    refresh = () =>{
-        let networkPromise = this.frisbee.get('/pending');
-        let timeOutPromise = new Promise(function(resolve, reject) {
-            setTimeout(resolve, 3000, 'Timeout Done');
-        });
-        let component = this;
-        Promise.all([networkPromise, timeOutPromise])
-            .then(function(value) {
-                if(value[0].body==='denied')
-                    component.refresh()
-                else{
-                    component.setState({request:false})
-                    component.frisbee.get('/status')
-                        .then((value)=>component.setState({status:value.body}))
-                        .catch(console.error);
-                }
-        });
-    }
+    command= (type) => this.socket.emit(type)
 
     getColor = ()=>{
         switch(this.state.status){
@@ -83,7 +62,7 @@ export class Body extends React.Component{
             case("closed"):
                 return "Fermé";
             case("pending"):
-                return ["Action en cours ",
+                return ["Action en cours  ",
                     <LoadingDots
                         key={1}
                         colors={["#ffffff", ORANGE, "#ffffff", ORANGE]}
@@ -95,7 +74,20 @@ export class Body extends React.Component{
     }
 
     render() {
-        const disabled=this.state.request;
+        if(!this.state.online){
+            return(
+                <View style={styles.containerOffline}>
+                    <Image source={require('../assets/chicken.png')} style={[styles.settingsLoading]} />
+                    <Text style={styles.textLoading}>Connexion en cours</Text>
+                    <LoadingDots
+                        colors={["#ffffff", ORANGE, "#ffffff", ORANGE]}
+                        size={15}
+                        bounceHeight={15}/>
+
+                </View>
+            )
+        }
+        const disabled=(this.state.status==="pending"?true:false)||(this.state.status==="unknow"?true:false);
         return(
             <View style={styles.container}>
                 <Modal
@@ -116,7 +108,6 @@ export class Body extends React.Component{
 
                 </View>
                 <View style={[styles.status,styles.flexCenter]}>
-                    {this.state.request?<ActivityIndicator size={50} color={ORANGE} />:null}
                     <Text style={styles.statusTitle}>Statut</Text>
                     <Text style={[styles.statusText,{color:this.getColor()}]}>{this.getStatus()}</Text>
                 </View>
@@ -138,6 +129,12 @@ export class Body extends React.Component{
 
 
 const styles = StyleSheet.create({
+    containerOffline:{
+        flex: 6,
+        flexDirection:"column",
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     container: {
         flex: 6,
         flexDirection:"column"
@@ -176,6 +173,16 @@ const styles = StyleSheet.create({
     settings:{
         maxWidth: 50,
         maxHeight: 50
+    },
+    settingsLoading:{
+        maxWidth: 100,
+        maxHeight: 100,
+        marginBottom:35
+    },
+    textLoading:{
+        fontSize:20,
+        color:"white",
+        marginBottom:35
     },
     settingsView:{
         paddingTop:Constants.statusBarHeight+10,
