@@ -40,7 +40,7 @@ export class Body extends React.Component{
 
     changeModal = () => this.setState({modal:!this.state.modal});
 
-    command= (type) => this.socket.emit(type)
+    command = (type) => this.socket.emit(type)
 
     getColor = ()=>{
         switch(this.state.status){
@@ -83,10 +83,10 @@ export class Body extends React.Component{
                         colors={["#ffffff", ORANGE, "#ffffff", ORANGE]}
                         size={15}
                         bounceHeight={15}/>
-
                 </View>
             )
         }
+
         const disabled=(this.state.status==="pending"?true:false)||(this.state.status==="unknow"?true:false);
         return(
             <View style={styles.container}>
