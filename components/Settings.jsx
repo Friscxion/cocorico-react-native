@@ -9,85 +9,62 @@ export class Settings extends React.Component{
         this.frisbee=require('../modules/frisbee');
 
         this.state={
-            value:""
+            value:"",
+            mounted:false
         }
     }
     componentDidMount() {
-        this.frisbee.get('/sunset_sunrise')
-            .then((res)=> {
-                console.log(res.body)
-                let sunrise = res.body.sunrise;
-                let sunset= res.body.sunset;
-                sunrise = sunrise.split('T')[1].split('.')[0];
-                sunset = sunset.split('T')[1].split('.')[0];
-                this.setState({
-                    sunrise: sunrise,
-                    sunset: sunset,
-                    sunsetBonus:res.body.sunsetAdd+"",
-                    sunsetAddon:res.body.sunsetAdd+"",
-                    sunriseBonus:res.body.sunriseAdd+"",
-                    sunriseAddon:res.body.sunriseAdd+""
-                })
-            })
-            .catch(console.error);
+        this.setState({mounted:true});
+        this.socketSetup();
     }
+    componentWillUnmount() {
+        this.state.mounted=false;
+    }
+
+
     socketSetup(){
         this.socket=require("../modules/cocorico-socket");
-        this.socket.on("status",(arg)=>{
-            console.log("Status : "+arg)
+        this.socket.on("data",(response)=>{
+            console.log(this.state.mounted)
+            if(!this.state.mounted)
+                return;
+            this.setData(response);
         })
-        this.socket.on("data",(arg)=>{
-            console.log("Data : " +arg)
-        })
+        this.socket.emit("data",  this.setData)
+    }
 
-        this.socket.on("connected",(arg)=>{
-            this.socket.emit("data",  (response) => {
-                console.log(new Date(response.sunset).getHours(),new Date(response.sunset).getMinutes());
-            });
-            this.socket.emit("ouvrir")
+    setData = (response)=>{
+        this.setState({
+            sunrise: new Date(response.sunrise).toTimeString().split(" ")[0],
+            sunset: new Date(response.sunset).toTimeString().split(" ")[0],
+            sunsetBonus:response.set_addon+"",
+            sunsetAddon:response.set_addon+"",
+            sunriseBonus:response.rise_addon+"",
+            sunriseAddon:response.rise_addon+""
         })
-
-        this.socket.on("connect_error", (err) => {
-            console.log(`connect_error due to ${err.message}`);
-        });
     }
 
 
-    onChangeInputSunset = (text) =>{
-        this.setState({sunsetBonus:text});
-    }
+    onChangeInputSunset = (text) => this.setState({sunsetBonus:text});
 
-    onChangeInputSunrise = (text) =>{
-        this.setState({sunriseBonus:text});
-    }
+    onChangeInputSunrise = (text) => this.setState({sunriseBonus:text});
 
-    componentWillUnmount() {
-       if(this.state.sunriseBonus!==this.state.sunriseAddon)
-           this.frisbee.post("/sunrise", {
-               headers: {
-                   'Content-Type': "application/json"
-               },
-               body: {
-                   data: parseInt(this.state.sunriseBonus)
-               }
-           })
+    save = () => {
+        if(this.state.sunriseBonus!==this.state.sunriseAddon)
+            this.socket.emit("setRiseAddon", this.state.sunriseBonus);
         if(this.state.sunsetBonus!==this.state.sunsetAddon)
-            this.frisbee.post("/sunset", {
-                headers: {
-                    'Content-Type': "application/json"
-                },
-                body: {
-                    data: parseInt(this.state.sunsetBonus)
-                }
-            })
+            this.socket.emit("setSetAddon",this.state.sunsetBonus);
+        this.props.body.changeModal();
     }
 
     render() {
         return (
             <View style={styles.modal}>
-                <TouchableOpacity onPress={this.props.body.changeModal} style={styles.viewclose}>
-                    <Image style={styles.close} source={close}/>
-                </TouchableOpacity>
+                <View style={{flexDirection:"row",justifyContent:"space-between",flex:0.5}}>
+                    <TouchableOpacity onPress={this.save}>
+                        <Image style={styles.close} source={close}/>
+                    </TouchableOpacity>
+                </View>
                 <View style={styles.viewhorraire}>
                     <Text style={styles.ip}>
                         Coucher :
@@ -123,10 +100,6 @@ const styles = StyleSheet.create({
         margin:10,
         maxWidth:40,
         maxHeight:40
-    },
-    viewclose:{
-        flex:0.5,
-
     },
     viewip:{
         flexDirection:"column",
