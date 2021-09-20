@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
         marginBottom:35
     },
     settingsView:{
-        paddingTop:Constants.statusBarHeight+10,
+        paddingTop:Constants.statusBarHeight,
         flex:0.4,
         padding:0
     },
