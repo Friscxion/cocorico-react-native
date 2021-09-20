@@ -6,8 +6,6 @@ import close from '../assets/close.png'
 export class Settings extends React.Component{
     constructor(props) {
         super(props);
-        this.frisbee=require('../modules/frisbee');
-
         this.state={
             value:"",
             mounted:false
