@@ -23,7 +23,6 @@ export class Settings extends React.Component{
     socketSetup(){
         this.socket=require("../modules/cocorico-socket");
         this.socket.on("data",(response)=>{
-            console.log(this.state.mounted)
             if(!this.state.mounted)
                 return;
             this.setData(response);
